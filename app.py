@@ -1,11 +1,10 @@
 import json
 import os
 import random
+from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
-from datetime import datetime
 from token_1 import token
-
 
 DATA_FILE = 'bot_data.json'
 
@@ -18,9 +17,8 @@ def load_bot_data():
     else:
         start_date = datetime.now()
         user_ids = set()
-        save_bot_data(start_date, user_ids) 
+        save_bot_data(start_date, user_ids)
     return start_date, user_ids
-
 
 def save_bot_data(start_date, user_ids):
     data = {
@@ -29,6 +27,11 @@ def save_bot_data(start_date, user_ids):
     }
     with open(DATA_FILE, 'w') as file:
         json.dump(data, file)
+
+def escape_markdown_v2(text):
+    """Helper function to escape special characters for MarkdownV2."""
+    escape_chars = r'\_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
 
 async def start(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -45,31 +48,25 @@ async def flip(update: Update, context: CallbackContext) -> None:
         return
     user = update.effective_user
     result = random.choice(["heads", "tails"])
-    user_link = f"[{user.first_name}](tg://user?id={user.id})"
+    user_link = f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
     message = f"『 {user_link} 』flipped a coin!\n\nIt's {result}!"
     if update.message.reply_to_message:
         original_msg_id = update.message.reply_to_message.message_id
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, reply_to_message_id=original_msg_id)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, parse_mode='HTML')
     else:
-        await update.message.reply_text(message)
+        await update.message.reply_text(message, parse_mode='HTML')
 
 
 async def dice(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id not in user_ids:
-        await inline_start(update, context) 
+        await inline_start(update, context)
         return
-
-    # Check if the command was triggered by replying to a message
     if update.message.reply_to_message:
-        # Get the message ID of the original message
         user_dice_msg_id = update.message.reply_to_message.message_id
-        # Send the dice emoji in reply to the original message
         await context.bot.send_dice(chat_id=update.effective_chat.id, reply_to_message_id=user_dice_msg_id)
     else:
-        # If the command was not triggered by replying to a message, send the dice emoji normally
         await context.bot.send_dice(chat_id=update.effective_chat.id)
-
 
 async def expire(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -81,7 +78,7 @@ async def expire(update: Update, context: CallbackContext) -> None:
 async def broadcast(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     if user_id not in user_ids:
-        await inline_start(update, context) 
+        await inline_start(update, context)
         return
     message = ' '.join(context.args)
     if not message:
