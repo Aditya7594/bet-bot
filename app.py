@@ -45,8 +45,14 @@ async def flip(update: Update, context: CallbackContext) -> None:
         return
     user = update.effective_user
     result = random.choice(["heads", "tails"])
-    message = f"『 {user.first_name} 』flipped a coin!\n\nIt's {result}!"
-    await update.message.reply_text(message)
+    user_link = f"[{user.first_name}](tg://user?id={user.id})"
+    message = f"『 {user_link} 』flipped a coin!\n\nIt's {result}!"
+    if update.message.reply_to_message:
+        original_msg_id = update.message.reply_to_message.message_id
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=message, reply_to_message_id=original_msg_id)
+    else:
+        await update.message.reply_text(message)
+
 
 async def dice(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
@@ -54,10 +60,16 @@ async def dice(update: Update, context: CallbackContext) -> None:
         await inline_start(update, context) 
         return
 
-  
-    if update.message.text.startswith('/dice'):
-        user_dice_msg_id = update.message.message_id
+    # Check if the command was triggered by replying to a message
+    if update.message.reply_to_message:
+        # Get the message ID of the original message
+        user_dice_msg_id = update.message.reply_to_message.message_id
+        # Send the dice emoji in reply to the original message
         await context.bot.send_dice(chat_id=update.effective_chat.id, reply_to_message_id=user_dice_msg_id)
+    else:
+        # If the command was not triggered by replying to a message, send the dice emoji normally
+        await context.bot.send_dice(chat_id=update.effective_chat.id)
+
 
 async def expire(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
